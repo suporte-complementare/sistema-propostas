@@ -1,0 +1,157 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 196 43% 25%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 196 43% 25%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 196 43% 25%;
+
+    /* Paleta da marca - Core */
+    --primary: 169 100% 31%; /* #009f80 */
+    --primary-foreground: 0 0% 100%;
+    
+    --primary-light: 168 43% 55%; /* #5db8a7 */
+    --primary-light-foreground: 196 43% 25%;
+
+    --secondary: 196 43% 97%;
+    --secondary-foreground: 196 43% 25%;
+
+    --muted: 187 30% 96%;
+    --muted-foreground: 188 41% 45%;
+
+    /* Paleta da marca - Accent */
+    --accent: 187 95% 32%; /* #058c9d */
+    --accent-foreground: 0 0% 100%;
+
+    /* Status colors */
+    --destructive: 196 43% 25%; /* #25515c - tom escuro para ações destrutivas */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 169 100% 31%; /* #009f80 - verde-azulado */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 187 41% 45%; /* #439aa6 - azul médio para atenção */
+    --warning-foreground: 0 0% 100%;
+    
+    /* Alert states - Alertas de prazo */
+    --alert-overdue: 196 43% 25%; /* #25515c - tom escuro para vencido */
+    --alert-overdue-foreground: 0 0% 100%;
+    
+    --alert-soon: 187 95% 32%; /* #058c9d - azul vibrante para próximo */
+    --alert-soon-foreground: 0 0% 100%;
+    
+    --alert-attention: 187 41% 45%; /* #439aa6 - azul médio para atenção */
+    --alert-attention-foreground: 196 43% 25%;
+
+    --border: 187 30% 90%;
+    --input: 187 30% 90%;
+    --ring: 169 100% 31%;
+
+    --radius: 0.5rem;
+    
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.08);
+
+    /* Table header */
+    --table-header: 188 80% 27%; /* #0e6e7c - tom escuro para cabeçalhos */
+    --table-header-foreground: 0 0% 100%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 196 43% 25%;
+    --sidebar-primary: 188 80% 27%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 187 30% 95%;
+    --sidebar-accent-foreground: 188 80% 27%;
+    --sidebar-border: 187 30% 90%;
+    --sidebar-ring: 169 100% 31%;
+  }
+
+  .dark {
+    --background: 196 43% 13%;
+    --foreground: 187 30% 98%;
+
+    --card: 196 43% 18%;
+    --card-foreground: 187 30% 98%;
+
+    --popover: 196 43% 18%;
+    --popover-foreground: 187 30% 98%;
+
+    /* Paleta da marca - Core (dark) */
+    --primary: 168 43% 55%; /* #5db8a7 - mais claro no dark mode */
+    --primary-foreground: 196 43% 13%;
+    
+    --primary-light: 169 100% 31%;
+    --primary-light-foreground: 0 0% 100%;
+
+    --secondary: 188 80% 20%;
+    --secondary-foreground: 187 30% 98%;
+
+    --muted: 188 44% 23%;
+    --muted-foreground: 187 30% 65%;
+
+    /* Paleta da marca - Accent (dark) */
+    --accent: 187 95% 42%; /* #058c9d mais claro */
+    --accent-foreground: 196 43% 13%;
+
+    /* Status colors (dark) */
+    --destructive: 196 43% 35%;
+    --destructive-foreground: 187 30% 98%;
+
+    --success: 168 43% 55%;
+    --success-foreground: 196 43% 13%;
+
+    --warning: 187 41% 55%;
+    --warning-foreground: 196 43% 13%;
+    
+    /* Alert states (dark) */
+    --alert-overdue: 196 43% 35%;
+    --alert-overdue-foreground: 187 30% 98%;
+    
+    --alert-soon: 187 95% 42%;
+    --alert-soon-foreground: 196 43% 13%;
+    
+    --alert-attention: 187 41% 55%;
+    --alert-attention-foreground: 196 43% 13%;
+
+    --border: 188 44% 23%;
+    --input: 188 44% 23%;
+    --ring: 168 43% 55%;
+    
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.3);
+    
+    /* Table header (dark) */
+    --table-header: 188 80% 35%;
+    --table-header-foreground: 0 0% 100%;
+
+    --sidebar-background: 188 44% 15%;
+    --sidebar-foreground: 187 30% 95%;
+    --sidebar-primary: 168 43% 55%;
+    --sidebar-primary-foreground: 196 43% 13%;
+    --sidebar-accent: 188 44% 20%;
+    --sidebar-accent-foreground: 187 30% 95%;
+    --sidebar-border: 188 44% 20%;
+    --sidebar-ring: 168 43% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
