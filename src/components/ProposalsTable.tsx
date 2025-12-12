@@ -34,7 +34,8 @@ interface ProposalsTableProps {
   onBulkStatusChange?: (ids: string[], newStatus: ProposalStatus) => void;
 }
 
-type SortField = "status" | "lastFollowUp" | "expectedReturnDate" | "value" | "sentDate";
+// ADICIONAMOS "clientName" AQUI NA LISTA DE ORDENAÇÃO
+type SortField = "status" | "lastFollowUp" | "expectedReturnDate" | "value" | "sentDate" | "clientName";
 type SortDirection = "asc" | "desc";
 
 export const ProposalsTable = ({
@@ -50,12 +51,11 @@ export const ProposalsTable = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // --- NOVOS ESTADOS (Paginação e Filtros) ---
+  // --- ESTADOS DE PAGINAÇÃO E FILTROS ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 100; // Mínimo de 100 por página como solicitado
+  const itemsPerPage = 100; // Define 100 itens por página
   const [showFilters, setShowFilters] = useState(false);
   
-  // Estados dos Filtros Avançados
   const [dateStart, setDateStart] = useState("");
   const [dateEnd, setDateEnd] = useState("");
   const [valueMin, setValueMin] = useState("");
@@ -132,10 +132,8 @@ export const ProposalsTable = ({
 
   // --- LÓGICA DE FILTRAGEM ---
   const filteredProposals = proposals.filter((proposal) => {
-    // 1. Filtro de Texto (Nome do Cliente)
     const matchesSearch = proposal.clientName.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // 2. Filtro de Data (Envio)
     let matchesDate = true;
     if (dateStart) {
       matchesDate = matchesDate && new Date(proposal.sentDate) >= new Date(dateStart);
@@ -144,7 +142,6 @@ export const ProposalsTable = ({
       matchesDate = matchesDate && new Date(proposal.sentDate) <= new Date(dateEnd);
     }
 
-    // 3. Filtro de Valor
     let matchesValue = true;
     if (valueMin) {
       matchesValue = matchesValue && proposal.value >= Number(valueMin);
@@ -156,7 +153,7 @@ export const ProposalsTable = ({
     return matchesSearch && matchesDate && matchesValue;
   });
 
-  // --- ORDENAÇÃO ---
+  // --- LÓGICA DE ORDENAÇÃO ---
   const sortedProposals = [...filteredProposals].sort((a, b) => {
     if (!sortField) return 0;
     let comparison = 0;
@@ -174,6 +171,9 @@ export const ProposalsTable = ({
       comparison = a.value - b.value;
     } else if (sortField === "sentDate") {
       comparison = a.sentDate.getTime() - b.sentDate.getTime();
+    } else if (sortField === "clientName") {
+      // ORDENAÇÃO DE A-Z PARA CLIENTES
+      comparison = a.clientName.localeCompare(b.clientName);
     }
     
     return sortDirection === "asc" ? comparison : -comparison;
@@ -184,7 +184,6 @@ export const ProposalsTable = ({
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProposals = sortedProposals.slice(startIndex, startIndex + itemsPerPage);
 
-  // Seleção
   const toggleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedIds(paginatedProposals.map((p) => p.id));
@@ -221,7 +220,7 @@ export const ProposalsTable = ({
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Volta para pág 1 ao buscar
+                  setCurrentPage(1);
                 }}
                 className="pl-10 border-slate-300 focus:border-[#25515c] focus:ring-[#25515c]"
               />
@@ -257,7 +256,7 @@ export const ProposalsTable = ({
           )}
         </div>
 
-        {/* ÁREA DE FILTROS AVANÇADOS (Expansível) */}
+        {/* ÁREA DE FILTROS AVANÇADOS (Escondida até clicar no botão Filtros) */}
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 animate-in slide-in-from-top-2">
             <div>
@@ -299,7 +298,12 @@ export const ProposalsTable = ({
                     onChange={(e) => toggleSelectAll(e.target.checked)}
                   />
                 </TableHead>
-                <TableHead className="text-slate-700 font-bold">Cliente</TableHead>
+                
+                {/* CABEÇALHO CLIENTE COM CLASSIFICAÇÃO */}
+                <TableHead className="text-slate-700 font-bold cursor-pointer hover:text-[#25515c]" onClick={() => handleSort("clientName")}>
+                  Cliente <ArrowUpDown className="h-3 w-3 inline" />
+                </TableHead>
+
                 <TableHead className="text-slate-700 font-bold cursor-pointer hover:text-[#25515c]" onClick={() => handleSort("sentDate")}>
                   Data Envio <ArrowUpDown className="h-3 w-3 inline" />
                 </TableHead>
@@ -322,7 +326,8 @@ export const ProposalsTable = ({
                     Previsão <ArrowUpDown className="h-3 w-3" />
                   </Button>
                 </TableHead>
-                <TableHead className="text-right text-slate-700 font-bold">Ações</TableHead>
+                {/* MUDANÇA VISUAL AQUI: DE "Ações" PARA "Opções" */}
+                <TableHead className="text-right text-slate-700 font-bold">Opções</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
