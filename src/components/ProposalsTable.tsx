@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Adicionado useEffect
 import { Proposal, ProposalStatus } from "@/types/proposal";
 import {
   Table,
@@ -34,7 +34,6 @@ interface ProposalsTableProps {
   onBulkStatusChange?: (ids: string[], newStatus: ProposalStatus) => void;
 }
 
-// ADICIONAMOS "clientName" AQUI NA LISTA DE ORDENAÇÃO
 type SortField = "status" | "lastFollowUp" | "expectedReturnDate" | "value" | "sentDate" | "clientName";
 type SortDirection = "asc" | "desc";
 
@@ -47,13 +46,35 @@ export const ProposalsTable = ({
   // --- ESTADOS DE CONTROLE ---
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [sortField, setSortField] = useState<SortField | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  
+  // --- ESTADOS DE ORDENAÇÃO COM MEMÓRIA (LOCALSTORAGE) ---
+  const [sortField, setSortField] = useState<SortField | null>(() => {
+    // Ao iniciar, tenta ler do armazenamento local
+    const savedField = localStorage.getItem("proposals_sortField");
+    return (savedField as SortField) || null;
+  });
+
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    // Ao iniciar, tenta ler do armazenamento local
+    const savedDirection = localStorage.getItem("proposals_sortDirection");
+    return (savedDirection as SortDirection) || "asc";
+  });
+
+  // Salva no armazenamento sempre que mudar
+  useEffect(() => {
+    if (sortField) {
+      localStorage.setItem("proposals_sortField", sortField);
+    } else {
+      localStorage.removeItem("proposals_sortField");
+    }
+    localStorage.setItem("proposals_sortDirection", sortDirection);
+  }, [sortField, sortDirection]);
+
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // --- ESTADOS DE PAGINAÇÃO E FILTROS ---
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 100; // Define 100 itens por página
+  const itemsPerPage = 100;
   const [showFilters, setShowFilters] = useState(false);
   
   const [dateStart, setDateStart] = useState("");
@@ -172,7 +193,6 @@ export const ProposalsTable = ({
     } else if (sortField === "sentDate") {
       comparison = a.sentDate.getTime() - b.sentDate.getTime();
     } else if (sortField === "clientName") {
-      // ORDENAÇÃO DE A-Z PARA CLIENTES
       comparison = a.clientName.localeCompare(b.clientName);
     }
     
@@ -256,7 +276,7 @@ export const ProposalsTable = ({
           )}
         </div>
 
-        {/* ÁREA DE FILTROS AVANÇADOS (Escondida até clicar no botão Filtros) */}
+        {/* ÁREA DE FILTROS AVANÇADOS */}
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200 animate-in slide-in-from-top-2">
             <div>
@@ -299,7 +319,7 @@ export const ProposalsTable = ({
                   />
                 </TableHead>
                 
-                {/* CABEÇALHO CLIENTE COM CLASSIFICAÇÃO */}
+                {/* CABEÇALHOS CLICÁVEIS */}
                 <TableHead className="text-slate-700 font-bold cursor-pointer hover:text-[#25515c]" onClick={() => handleSort("clientName")}>
                   Cliente <ArrowUpDown className="h-3 w-3 inline" />
                 </TableHead>
@@ -326,7 +346,6 @@ export const ProposalsTable = ({
                     Previsão <ArrowUpDown className="h-3 w-3" />
                   </Button>
                 </TableHead>
-                {/* MUDANÇA VISUAL AQUI: DE "Ações" PARA "Opções" */}
                 <TableHead className="text-right text-slate-700 font-bold">Opções</TableHead>
               </TableRow>
             </TableHeader>
