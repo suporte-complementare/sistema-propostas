@@ -20,14 +20,73 @@ const Index = () => {
   const [password, setPassword] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // --- ESTADOS ---
+  // --- ESTADOS DE DADOS ---
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProposal, setEditingProposal] = useState<Proposal | undefined>();
-  
-  // NOVO: Estado para alternar entre "Ativas" e "Arquivadas"
   const [showArchived, setShowArchived] = useState(false);
+
+  // --- ESTADOS DE FILTRO (Elevados para o Pai) ---
+  const [searchTerm, setSearchTerm] = useState("");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
+  const [valueMin, setValueMin] = useState("");
+  const [valueMax, setValueMax] = useState("");
+  const [periodPreset, setPeriodPreset] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // --- LÓGICA DE DATAS INTELIGENTE (Agora no Pai) ---
+  const handlePeriodChange = (value: string) => {
+    setPeriodPreset(value);
+    
+    if (value === "all") {
+      setDateStart("");
+      setDateEnd("");
+      return;
+    }
+
+    const today = new Date();
+    // Ajuste de fuso horário para evitar erros de dia anterior
+    const getLocalISO = (d: Date) => {
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString().split('T')[0];
+    };
+
+    let start = new Date();
+    let end = new Date();
+
+    switch (value) {
+      case "today": break; // Início e fim são hoje
+      case "last-7": start.setDate(today.getDate() - 7); break;
+      case "last-30": start.setDate(today.getDate() - 30); break;
+      case "last-3-months": start.setMonth(today.getMonth() - 3); break;
+      case "last-12-months": start.setFullYear(today.getFullYear() - 1); break;
+      case "this-month":
+        start.setDate(1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case "mtd": start.setDate(1); break; // Mês até a data
+      case "qtd": // Trimestre até a data
+        const quarterMonth = Math.floor(today.getMonth() / 3) * 3;
+        start = new Date(today.getFullYear(), quarterMonth, 1);
+        break;
+      case "ytd": start = new Date(today.getFullYear(), 0, 1); break; // Ano até a data
+    }
+
+    setDateStart(getLocalISO(start));
+    setDateEnd(getLocalISO(end));
+  };
+
+  // Limpar filtros
+  const clearFilters = () => {
+    setPeriodPreset("all");
+    setDateStart("");
+    setDateEnd("");
+    setValueMin("");
+    setValueMax("");
+    setSearchTerm("");
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -82,7 +141,7 @@ const Index = () => {
         lastFollowUp: p.last_follow_up ? new Date(p.last_follow_up) : undefined,
         expectedReturnDate: p.expected_return_date ? new Date(p.expected_return_date) : undefined,
         notes: p.notes,
-        archived: p.archived || false, // Mapeia o campo novo
+        archived: p.archived || false,
       }));
 
       setProposals(formattedProposals);
@@ -106,7 +165,7 @@ const Index = () => {
         last_follow_up: proposal.lastFollowUp?.toISOString(),
         expected_return_date: proposal.expectedReturnDate?.toISOString(),
         notes: proposal.notes,
-        archived: false // Padrão
+        archived: false
       });
       if (error) throw error;
       toast.success("Salvo com sucesso!");
@@ -126,7 +185,6 @@ const Index = () => {
         last_follow_up: proposal.lastFollowUp?.toISOString(),
         expected_return_date: proposal.expectedReturnDate?.toISOString(),
         notes: proposal.notes
-        // Não atualizamos o archived aqui para não sumir sem querer
       }).eq('id', proposal.id);
       if (error) throw error;
       toast.success("Atualizado!");
@@ -153,7 +211,6 @@ const Index = () => {
     } catch (error) { toast.error("Erro na atualização em massa."); }
   };
 
-  // NOVA FUNÇÃO: Arquivar ou Restaurar
   const handleArchiveProposal = async (id: string, archive: boolean) => {
     try {
       const { error } = await supabase.from('proposals').update({ archived: archive }).eq('id', id);
@@ -172,8 +229,34 @@ const Index = () => {
     } catch (error) { toast.error("Erro na ação em massa."); }
   };
 
-  // Lógica de visualização
-  const displayedProposals = proposals.filter(p => !!p.archived === showArchived);
+  // --- FILTRAGEM FINAL (Onde a mágica acontece) ---
+  const displayedProposals = proposals.filter(p => {
+    // 1. Filtro de Arquivo (Abas)
+    if (!!p.archived !== showArchived) return false;
+
+    // 2. Filtro de Texto
+    const matchesSearch = p.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // 3. Filtro de Data
+    let matchesDate = true;
+    
+    if (dateStart) {
+      // Compara strings ISO (YYYY-MM-DD) para evitar confusão de fuso horário
+      const pDateISO = p.sentDate.toISOString().split('T')[0];
+      matchesDate = matchesDate && pDateISO >= dateStart;
+    }
+    if (dateEnd) {
+      const pDateISO = p.sentDate.toISOString().split('T')[0];
+      matchesDate = matchesDate && pDateISO <= dateEnd;
+    }
+
+    // 4. Filtro de Valor
+    let matchesValue = true;
+    if (valueMin) matchesValue = matchesValue && p.value >= Number(valueMin);
+    if (valueMax) matchesValue = matchesValue && p.value <= Number(valueMax);
+
+    return matchesSearch && matchesDate && matchesValue;
+  });
 
   if (!session) {
     if (authLoading) return null;
@@ -245,17 +328,30 @@ const Index = () => {
               </button>
             </div>
 
-            {/* Passamos apenas as propostas filtradas para o Dashboard e Tabela */}
+            {/* O Dashboard agora recebe APENAS as propostas que passaram pelos filtros */}
             <Dashboard proposals={displayedProposals} />
             
+            {/* A Tabela recebe os dados filtrados e as funções para controlar os filtros */}
             <ProposalsTable
               proposals={displayedProposals}
               onEdit={(p) => { setEditingProposal(p); setIsDialogOpen(true); }}
               onDelete={handleDeleteProposal}
               onBulkStatusChange={handleBulkStatusChange}
-              onArchive={handleArchiveProposal} // Nova função
-              onBulkArchive={handleBulkArchive} // Nova função
-              isArchivedView={showArchived} // Novo estado
+              onArchive={handleArchiveProposal}
+              onBulkArchive={handleBulkArchive}
+              isArchivedView={showArchived}
+              // Passando controles de filtro para a tabela
+              filters={{
+                searchTerm, setSearchTerm,
+                dateStart, setDateStart,
+                dateEnd, setDateEnd,
+                valueMin, setValueMin,
+                valueMax, setValueMax,
+                periodPreset, setPeriodPreset,
+                showFilters, setShowFilters,
+                handlePeriodChange,
+                clearFilters
+              }}
             />
           </>
         )}
