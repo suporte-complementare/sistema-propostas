@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"; // Adicionado useEffect
+import { useState, useEffect } from "react";
 import { Proposal, ProposalStatus } from "@/types/proposal";
 import {
   Table,
@@ -14,7 +14,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { 
   Edit, Trash2, Search, ArrowUpDown, Check, X, Clock, 
-  AlertTriangle, AlertCircle, Filter, ChevronLeft, ChevronRight 
+  AlertTriangle, AlertCircle, Filter, ChevronLeft, ChevronRight, Archive, RefreshCcw 
 } from "lucide-react";
 import {
   AlertDialog,
@@ -32,6 +32,9 @@ interface ProposalsTableProps {
   onEdit: (proposal: Proposal) => void;
   onDelete: (id: string) => void;
   onBulkStatusChange?: (ids: string[], newStatus: ProposalStatus) => void;
+  onArchive: (id: string, archive: boolean) => void; // Nova função para arquivar um
+  onBulkArchive: (ids: string[], archive: boolean) => void; // Nova função para arquivar vários
+  isArchivedView: boolean; // Para saber se estamos vendo o arquivo morto
 }
 
 type SortField = "status" | "lastFollowUp" | "expectedReturnDate" | "value" | "sentDate" | "clientName";
@@ -42,6 +45,9 @@ export const ProposalsTable = ({
   onEdit,
   onDelete,
   onBulkStatusChange,
+  onArchive,
+  onBulkArchive,
+  isArchivedView,
 }: ProposalsTableProps) => {
   // --- ESTADOS DE CONTROLE ---
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,18 +55,15 @@ export const ProposalsTable = ({
   
   // --- ESTADOS DE ORDENAÇÃO COM MEMÓRIA (LOCALSTORAGE) ---
   const [sortField, setSortField] = useState<SortField | null>(() => {
-    // Ao iniciar, tenta ler do armazenamento local
     const savedField = localStorage.getItem("proposals_sortField");
     return (savedField as SortField) || null;
   });
 
   const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
-    // Ao iniciar, tenta ler do armazenamento local
     const savedDirection = localStorage.getItem("proposals_sortDirection");
     return (savedDirection as SortDirection) || "asc";
   });
 
-  // Salva no armazenamento sempre que mudar
   useEffect(() => {
     if (sortField) {
       localStorage.setItem("proposals_sortField", sortField);
@@ -227,6 +230,14 @@ export const ProposalsTable = ({
     }
   };
 
+  const executeBulkArchive = () => {
+    if (selectedIds.length > 0) {
+      // Se estamos no arquivo morto, queremos desarquivar (false), senão arquivar (true)
+      onBulkArchive(selectedIds, !isArchivedView);
+      setSelectedIds([]);
+    }
+  };
+
   return (
     <>
       <Card className="p-6 border-slate-200 shadow-sm space-y-4">
@@ -258,19 +269,30 @@ export const ProposalsTable = ({
 
           {/* Ações em Massa */}
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-[#E4F4F0] p-2 rounded-md animate-in fade-in slide-in-from-top-1 border border-[#CBEAE2] w-full md:w-auto justify-center">
+            <div className="flex items-center gap-2 bg-[#E4F4F0] p-2 rounded-md animate-in fade-in slide-in-from-top-1 border border-[#CBEAE2] w-full md:w-auto justify-center flex-wrap">
               <span className="text-sm font-medium px-2 text-[#25515c]">
                 {selectedIds.length} selecionados
               </span>
               <div className="h-4 w-[1px] bg-[#25515c]/20 mx-1" />
-              <Button size="sm" variant="ghost" className="text-green-700 hover:bg-green-100" onClick={() => executeBulkAction('approved')}>
-                <Check className="w-4 h-4 mr-1" /> Aprovar
-              </Button>
-              <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-100" onClick={() => executeBulkAction('rejected')}>
-                <X className="w-4 h-4 mr-1" /> Recusar
-              </Button>
-               <Button size="sm" variant="ghost" className="text-slate-700 hover:bg-slate-200" onClick={() => executeBulkAction('pending')}>
-                <Clock className="w-4 h-4 mr-1" /> Aguardar
+              
+              {!isArchivedView && (
+                <>
+                  <Button size="sm" variant="ghost" className="text-green-700 hover:bg-green-100" onClick={() => executeBulkAction('approved')}>
+                    <Check className="w-4 h-4 mr-1" /> Aprovar
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-red-700 hover:bg-red-100" onClick={() => executeBulkAction('rejected')}>
+                    <X className="w-4 h-4 mr-1" /> Recusar
+                  </Button>
+                   <Button size="sm" variant="ghost" className="text-slate-700 hover:bg-slate-200" onClick={() => executeBulkAction('pending')}>
+                    <Clock className="w-4 h-4 mr-1" /> Aguardar
+                  </Button>
+                </>
+              )}
+              
+              {/* BOTÃO ARQUIVAR/RESTAURAR EM MASSA */}
+              <Button size="sm" variant="ghost" className="text-slate-700 hover:bg-slate-200" onClick={executeBulkArchive}>
+                {isArchivedView ? <RefreshCcw className="w-4 h-4 mr-1" /> : <Archive className="w-4 h-4 mr-1" />}
+                {isArchivedView ? "Restaurar" : "Arquivar"}
               </Button>
             </div>
           )}
@@ -325,7 +347,7 @@ export const ProposalsTable = ({
                 </TableHead>
 
                 <TableHead className="text-slate-700 font-bold cursor-pointer hover:text-[#25515c]" onClick={() => handleSort("sentDate")}>
-                  Data Envio <ArrowUpDown className="h-3 w-3 inline" />
+                  Data <ArrowUpDown className="h-3 w-3 inline" />
                 </TableHead>
                 <TableHead className="text-slate-700 font-bold">Via</TableHead>
                 <TableHead className="text-slate-700 font-bold cursor-pointer hover:text-[#25515c]" onClick={() => handleSort("value")}>
@@ -364,7 +386,7 @@ export const ProposalsTable = ({
                   
                   const rowClassName = isSelected 
                     ? "bg-[#25515c]/10 border-l-4 border-l-[#25515c]" 
-                    : `${followUpStyle} border-b border-white/50`;
+                    : `${followUpStyle} border-b border-white/50 hover:bg-slate-50`;
 
                   return (
                     <TableRow key={proposal.id} className={rowClassName}>
@@ -402,7 +424,23 @@ export const ProposalsTable = ({
 
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => onEdit(proposal)} className="hover:bg-white/50">
+                          
+                          {/* BOTÃO DE ARQUIVAR NA LINHA INDIVIDUAL */}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => onArchive(proposal.id, !isArchivedView)} 
+                            className="hover:bg-slate-200"
+                            title={isArchivedView ? "Restaurar" : "Arquivar"}
+                          >
+                            {isArchivedView ? (
+                              <RefreshCcw className="h-4 w-4 opacity-70" />
+                            ) : (
+                              <Archive className="h-4 w-4 opacity-70" />
+                            )}
+                          </Button>
+
+                          <Button variant="ghost" size="icon" onClick={() => onEdit(proposal)} className="hover:bg-blue-100 hover:text-blue-600">
                             <Edit className="h-4 w-4 opacity-70" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => setDeleteId(proposal.id)} className="hover:bg-red-100 hover:text-red-600">
